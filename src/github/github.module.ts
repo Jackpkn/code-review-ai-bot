@@ -6,5 +6,6 @@ import { HttpService } from 'src/shared/http.service';
 @Module({
   providers: [GithubService, HttpService],
   imports: [HttpModule],
+  exports: [GithubService],
 })
-export class GithubModule {}
+export class GithubModule { }
