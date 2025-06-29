@@ -170,6 +170,7 @@ export class ReviewService {
       }
 
       // Fallback: parse structured text
+      this.logger.debug('Using fallback text parsing');
       const lines = response.split('\n');
       let summary = '';
       const suggestions: ReviewSuggestion[] = [];

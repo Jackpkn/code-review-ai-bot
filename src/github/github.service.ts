@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from 'src/shared/http.service';
+
 export interface PullRequestFile {
   filename: string;
   status: string;
@@ -11,6 +12,7 @@ export interface PullRequestFile {
   patch?: string;
   contents_url: string;
 }
+
 export interface PullRequestData {
   number: number;
   title: string;
@@ -25,6 +27,10 @@ export interface PullRequestData {
   };
 }
 
+interface GithubError {
+  message: string;
+}
+
 @Injectable()
 export class GithubService {
   private readonly logger = new Logger(GithubService.name);
@@ -37,6 +43,7 @@ export class GithubService {
   ) {
     this.githubToken = this.configService.get<string>('GITHUB_TOKEN');
   }
+
   private getHeaders() {
     return {
       Authorization: `Bearer ${this.githubToken}`,
@@ -44,6 +51,7 @@ export class GithubService {
       'X-GitHub-Api-Version': '2022-11-28',
     };
   }
+
   async getPullRequestFiles(
     owner: string,
     repo: string,
@@ -52,7 +60,9 @@ export class GithubService {
     try {
       const url = `${this.baseUrl}/repos/${owner}/${repo}/pulls/${pullNumber}/files`;
       const response = await firstValueFrom(
-        this.httpService.get(url, { headers: this.getHeaders() }),
+        this.httpService.get<PullRequestFile[]>(url, {
+          headers: this.getHeaders(),
+        }),
       );
 
       this.logger.log(
@@ -60,10 +70,12 @@ export class GithubService {
       );
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to fetch PR files: ${error.message}`);
+      const githubError = error as GithubError;
+      this.logger.error(`Failed to fetch PR files: ${githubError.message}`);
       throw error;
     }
   }
+
   async getPullRequest(
     owner: string,
     repo: string,
@@ -72,14 +84,18 @@ export class GithubService {
     try {
       const url = `${this.baseUrl}/repos/${owner}/${repo}/pulls/${pullNumber}`;
       const response = await firstValueFrom(
-        this.httpService.get(url, { headers: this.getHeaders() }),
+        this.httpService.get<PullRequestData>(url, {
+          headers: this.getHeaders(),
+        }),
       );
       return response.data;
     } catch (error) {
-      this.logger.error(`Failed to fetch PR data: ${error.message}`);
+      const githubError = error as GithubError;
+      this.logger.error(`Failed to fetch PR data: ${githubError.message}`);
       throw error;
     }
   }
+
   async postReviewComment(
     owner: string,
     repo: string,
@@ -106,10 +122,14 @@ export class GithubService {
 
       this.logger.log(`Posted review comment on ${filename}:${line}`);
     } catch (error) {
-      this.logger.error(`Failed to post review comment: ${error.message}`);
+      const githubError = error as GithubError;
+      this.logger.error(
+        `Failed to post review comment: ${githubError.message}`,
+      );
       throw error;
     }
   }
+
   async postGeneralComment(
     owner: string,
     repo: string,
@@ -125,10 +145,14 @@ export class GithubService {
 
       this.logger.log(`Posted general comment on PR #${pullNumber}`);
     } catch (error) {
-      this.logger.error(`Failed to post general comment: ${error.message}`);
+      const githubError = error as GithubError;
+      this.logger.error(
+        `Failed to post general comment: ${githubError.message}`,
+      );
       throw error;
     }
   }
+
   async createReview(
     owner: string,
     repo: string,
@@ -160,7 +184,8 @@ export class GithubService {
         `Created review for PR #${pullNumber} with ${comments.length} comments`,
       );
     } catch (error) {
-      this.logger.error(`Failed to create review: ${error.message}`);
+      const githubError = error as GithubError;
+      this.logger.error(`Failed to create review: ${githubError.message}`);
       throw error;
     }
   }
