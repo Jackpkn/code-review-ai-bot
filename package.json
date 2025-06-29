@@ -28,6 +28,7 @@
     "@octokit/rest": "^22.0.0",
     "axios": "^1.10.0",
     "joi": "^17.13.3",
+    "pino": "^9.7.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
