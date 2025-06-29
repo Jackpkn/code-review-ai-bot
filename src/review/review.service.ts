@@ -6,13 +6,13 @@ export interface ReviewSuggestion {
   filename: string;
   line?: number;
   type:
-    | 'bug'
-    | 'improvement'
-    | 'security'
-    | 'naming'
-    | 'edge_case'
-    | 'documentation'
-    | 'testing';
+  | 'bug'
+  | 'improvement'
+  | 'security'
+  | 'naming'
+  | 'edge_case'
+  | 'documentation'
+  | 'testing';
   severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   description: string;
@@ -28,7 +28,13 @@ export interface ReviewResult {
 export class ReviewService {
   private readonly logger = new Logger(ReviewService.name);
   private readonly model: string;
-  private readonly groqService: GroqService;
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly groqService: GroqService,
+  ) {
+    this.model = this.configService.get<string>('GROQ_MODEL', 'meta-llama/llama-4-scout-17b-16e-instruct');
+  }
 
   async reviewPullRequest(
     prData: { title: string; body: string; number: number },
@@ -66,7 +72,7 @@ export class ReviewService {
       );
       return reviewResult;
     } catch (error) {
-      this.logger.error(`AI review failed: ${error.message}`);
+      this.logger.error(`AI review failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
