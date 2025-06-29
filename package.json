@@ -27,6 +27,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@octokit/rest": "^22.0.0",
     "axios": "^1.10.0",
+    "groq-sdk": "^0.26.0",
     "joi": "^17.13.3",
     "pino": "^9.7.0",
     "reflect-metadata": "^0.2.2",
