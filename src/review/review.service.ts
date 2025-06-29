@@ -137,10 +137,36 @@ export class ReviewService {
 
   private parseAIResponse(response: string): ReviewResult {
     try {
-      // Try to parse as JSON first
-      const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1]);
+      this.logger.debug('Parsing AI response...');
+
+      // Try to parse as JSON first (multiple patterns)
+      const jsonPatterns = [
+        /```json\n([\s\S]*?)\n```/, // Standard markdown JSON block
+        /```\n([\s\S]*?)\n```/, // Generic code block
+        /\{[\s\S]*\}/, // Any JSON-like content
+      ];
+
+      for (const pattern of jsonPatterns) {
+        const match = response.match(pattern);
+        if (match) {
+          const jsonStr = match[1] || match[0];
+          try {
+            const parsed = JSON.parse(jsonStr);
+            this.logger.debug('Successfully parsed JSON response');
+
+            // Validate the parsed structure
+            const validation = this.validateReviewResult(parsed);
+            if (validation.isValid) {
+              return parsed as ReviewResult;
+            } else {
+              this.logger.warn(`JSON parsed but validation failed: ${validation.errors.join(', ')}`);
+              // Continue to fallback parsing
+            }
+          } catch (parseError) {
+            this.logger.debug(`Failed to parse JSON with pattern ${pattern}: ${parseError.message}`);
+            continue;
+          }
+        }
       }
 
       // Fallback: parse structured text
@@ -212,5 +238,66 @@ export class ReviewService {
         overallScore: 7,
       };
     }
+  }
+
+  private validateReviewResult(result: any): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Check required fields
+    if (!result.summary || typeof result.summary !== 'string') {
+      errors.push('Missing or invalid "summary" field');
+    }
+
+    if (typeof result.overallScore !== 'number' || result.overallScore < 1 || result.overallScore > 10) {
+      errors.push('"overallScore" must be a number between 1-10');
+    }
+
+    if (!Array.isArray(result.suggestions)) {
+      errors.push('"suggestions" must be an array');
+    } else {
+      // Validate each suggestion
+      result.suggestions.forEach((suggestion: any, index: number) => {
+        const suggestionErrors = this.validateSuggestion(suggestion, index);
+        errors.push(...suggestionErrors);
+      });
+    }
+
+    return { isValid: errors.length === 0, errors };
+  }
+
+  private validateSuggestion(suggestion: any, index: number): string[] {
+    const errors: string[] = [];
+
+    // Required fields
+    if (!suggestion.filename || typeof suggestion.filename !== 'string') {
+      errors.push(`Suggestion ${index + 1}: Missing or invalid "filename"`);
+    }
+
+    if (!suggestion.type || !['bug', 'improvement', 'security', 'naming', 'edge_case', 'documentation', 'testing'].includes(suggestion.type)) {
+      errors.push(`Suggestion ${index + 1}: Invalid "type" - must be one of: bug, improvement, security, naming, edge_case, documentation, testing`);
+    }
+
+    if (!suggestion.severity || !['low', 'medium', 'high', 'critical'].includes(suggestion.severity)) {
+      errors.push(`Suggestion ${index + 1}: Invalid "severity" - must be one of: low, medium, high, critical`);
+    }
+
+    if (!suggestion.title || typeof suggestion.title !== 'string') {
+      errors.push(`Suggestion ${index + 1}: Missing or invalid "title"`);
+    }
+
+    if (!suggestion.description || typeof suggestion.description !== 'string') {
+      errors.push(`Suggestion ${index + 1}: Missing or invalid "description"`);
+    }
+
+    // Optional fields validation
+    if (suggestion.line !== undefined && (typeof suggestion.line !== 'number' || suggestion.line < 1)) {
+      errors.push(`Suggestion ${index + 1}: "line" must be a positive number if provided`);
+    }
+
+    if (suggestion.suggestedFix !== undefined && typeof suggestion.suggestedFix !== 'string') {
+      errors.push(`Suggestion ${index + 1}: "suggestedFix" must be a string if provided`);
+    }
+
+    return errors;
   }
 }
