@@ -31,6 +31,28 @@
 $ pnpm install
 ```
 
+## Environment Variables
+
+This project requires several environment variables to function properly. Copy the example file and configure your variables:
+
+```bash
+$ cp .env.example .env
+```
+
+Then edit the `.env` file with your actual values:
+
+- `GROQ_API_KEY`: Your Groq API key for AI code review functionality
+- `GITHUB_TOKEN`: Your GitHub personal access token for GitHub API access
+- `GITHUB_WEBHOOK_SECRET`: Secret for GitHub webhook verification
+- `NODE_ENV`: Environment (development/production/test)
+- `PORT`: Server port (default: 3000)
+
+### Getting API Keys
+
+1. **Groq API Key**: Sign up at [Groq](https://console.groq.com/) and generate an API key
+2. **GitHub Token**: Create a personal access token at [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
+3. **GitHub Webhook Secret**: Generate a random secret for webhook verification
+
 ## Compile and run the project
 
 ```bash
