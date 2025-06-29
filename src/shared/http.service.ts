@@ -8,7 +8,7 @@ export class HttpService {
   get<T = any>(url: string, config?: any): Observable<AxiosResponse<T>> {
     return this.httpService.get(url, config);
   }
-  POST<T = any>(
+  post<T = any>(
     url: string,
     data?: any,
     config?: any,
