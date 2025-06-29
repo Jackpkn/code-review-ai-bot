@@ -1,18 +1,22 @@
 import { Module } from '@nestjs/common';
-
+import { ConfigModule } from '@nestjs/config';
+import { envValidationSchema } from './config/env.validation';
 import { GithubModule } from './github/github.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { ReviewModule } from './review/review.module';
 import { LoggerModule } from './logger/logger.module';
-import { ConfigModule } from './config/config.module';
 
 @Module({
   imports: [
-    GithubModule,
-    WebhookModule,
-    ReviewModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      envFilePath: '.env',
+    }),
     LoggerModule,
-    ConfigModule,
+    GithubModule,
+    ReviewModule,
+    WebhookModule,
   ],
 })
 export class AppModule {}
