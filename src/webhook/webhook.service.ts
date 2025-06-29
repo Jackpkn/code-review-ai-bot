@@ -9,7 +9,7 @@ export class WebhookService {
   constructor(
     private readonly githubService: GithubService,
     private readonly reviewService: ReviewService,
-  ) {}
+  ) { }
 
   async handlePullRequestEvent(payload: any): Promise<void> {
     const { action, pull_request, repository } = payload;
@@ -93,14 +93,21 @@ export class WebhookService {
       reviewBody += `\n\n**Found ${suggestions.length} suggestions for improvement:**`;
     }
 
-    // Prepare inline comments
+    // Prepare inline comments with validation
     const inlineComments = suggestions
-      .filter((s) => s.filename && s.line)
+      .filter((s) => s.filename && s.line && typeof s.line === 'number' && s.line > 0)
       .map((s) => ({
         path: s.filename,
         line: s.line,
         body: this.formatSuggestion(s),
       }));
+
+    this.logger.log(`Prepared ${inlineComments.length} valid inline comments out of ${suggestions.length} suggestions`);
+
+    // Debug: log suggestion details
+    suggestions.forEach((s, index) => {
+      this.logger.debug(`Suggestion ${index + 1}: filename=${s.filename}, line=${s.line}, type=${typeof s.line}`);
+    });
 
     // Post the review
     const event =
@@ -110,15 +117,27 @@ export class WebhookService {
           ? 'COMMENT'
           : 'REQUEST_CHANGES';
 
-    await this.githubService.createReview(
-      owner,
-      repo,
-      pullNumber,
-      commitSha,
-      reviewBody,
-      event,
-      inlineComments,
-    );
+    try {
+      await this.githubService.createReview(
+        owner,
+        repo,
+        pullNumber,
+        commitSha,
+        reviewBody,
+        event,
+        inlineComments,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to create review: ${error.message}`);
+      // Fallback: post as general comment instead
+      await this.githubService.postGeneralComment(
+        owner,
+        repo,
+        pullNumber,
+        `${reviewBody}\n\n⚠️ **Note:** Some inline comments could not be posted due to API limitations.`,
+      );
+      return;
+    }
 
     // Post general suggestions as a separate comment if there are any
     const generalSuggestions = suggestions.filter(
