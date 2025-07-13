@@ -1,0 +1,40 @@
+name: Nodejs c
+
+on: [pull, push_request]
+
+jobs:
+  build:
+    runs_on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use node.js
+        uses: actions/setup-node@v3
+        with:
+          node_version: '18'
+      - run: npm install
+      - run: npm test
+
+
+# keep remote changes, discard local change -> git checkout --their <filename>
+# keep local changes , discard there changes -> git checkout --ours <filename>
+# add git commit for fast forward git merge --no-ff <branchname>
+# for safety use git merge --ff-only <branch>
+# conflict in binary files (eg. images )  // chose one, commit manully
+# Repeated merge conflict on same file git pull fetch chagnes and merge it 
+# git fetch => take rmeote changes and dont merge automatically 
+# git log --oneline --graph
+# if you want to update the last commit then use command git commit --amend
+# if you want to toke one branch commit branch use git cherry-pick <commit-hash>
+# force merge ignoring unrelated histories 
+# keep both conflicating changes  edit file to manually include both version
+# Preview merge changes before applying => git merge --no-commit --no-ff
+# want to to test a merge locally before pushing => git merge --no-commit and test
+# accidental merge pushed to main => use git revert -m i <merge-commit> to undo safely
+# merge dev to main
+# git checkout main && git merge dev && git restore --staged .env 
+# git pull origin main => if it showing conflict then resolve conflict 
+# git pull --rebase origin main
+# resolve conflict 
+# git add .
+# git rebase --continue
+
