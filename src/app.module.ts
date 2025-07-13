@@ -5,6 +5,7 @@ import { GithubModule } from './github/github.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { ReviewModule } from './review/review.module';
 import { LoggerModule } from './logger/logger.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { LoggerModule } from './logger/logger.module';
     GithubModule,
     ReviewModule,
     WebhookModule,
+    AgentsModule,
   ],
 })
 export class AppModule {}
