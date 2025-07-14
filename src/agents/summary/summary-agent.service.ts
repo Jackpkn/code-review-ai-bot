@@ -129,6 +129,7 @@ export class SummaryAgentService extends BaseAgentService {
         const severityOrder = { high: 3, medium: 2, low: 1 };
 
         if (
+          existing &&
           severityOrder[comment.severity] > severityOrder[existing.severity]
         ) {
           seen.set(key, comment);

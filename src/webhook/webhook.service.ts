@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GithubService } from 'src/github/github.service';
 import { ReviewService } from 'src/review/review.service';
+import { EnhancedPRAgentService } from 'src/agents/pr-review/enhanced-pr-agent.service';
 
 @Injectable()
 export class WebhookService {
@@ -9,7 +10,8 @@ export class WebhookService {
   constructor(
     private readonly githubService: GithubService,
     private readonly reviewService: ReviewService,
-  ) { }
+    private readonly enhancedPRService: EnhancedPRAgentService,
+  ) {}
 
   async handlePullRequestEvent(payload: any): Promise<void> {
     const { action, pull_request, repository } = payload;
@@ -42,24 +44,31 @@ export class WebhookService {
         return;
       }
 
-      // Perform AI review
-      const reviewResult = await this.reviewService.reviewPullRequest(
-        {
-          title: prData.title,
-          body: prData.body,
-          number: pullNumber,
-        },
-        files,
-      );
+      // Use enhanced PR analysis if available
+      const useEnhancedReview = process.env.USE_ENHANCED_PR_REVIEW === 'true';
 
-      // Post review results
-      await this.postReviewResults(
-        owner,
-        repo,
-        pullNumber,
-        commitSha,
-        reviewResult,
-      );
+      if (useEnhancedReview) {
+        await this.handleEnhancedPRReview(owner, repo, pullNumber, commitSha);
+      } else {
+        // Perform standard AI review
+        const reviewResult = await this.reviewService.reviewPullRequest(
+          {
+            title: prData.title,
+            body: prData.body,
+            number: pullNumber,
+          },
+          files,
+        );
+
+        // Post review results
+        await this.postReviewResults(
+          owner,
+          repo,
+          pullNumber,
+          commitSha,
+          reviewResult,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Failed to process PR #${pullNumber}: ${error.message}`,
@@ -95,18 +104,24 @@ export class WebhookService {
 
     // Prepare inline comments with validation
     const inlineComments = suggestions
-      .filter((s) => s.filename && s.line && typeof s.line === 'number' && s.line > 0)
+      .filter(
+        (s) => s.filename && s.line && typeof s.line === 'number' && s.line > 0,
+      )
       .map((s) => ({
         path: s.filename,
         line: s.line,
         body: this.formatSuggestion(s),
       }));
 
-    this.logger.log(`Prepared ${inlineComments.length} valid inline comments out of ${suggestions.length} suggestions`);
+    this.logger.log(
+      `Prepared ${inlineComments.length} valid inline comments out of ${suggestions.length} suggestions`,
+    );
 
     // Debug: log suggestion details
     suggestions.forEach((s, index) => {
-      this.logger.debug(`Suggestion ${index + 1}: filename=${s.filename}, line=${s.line}, type=${typeof s.line}`);
+      this.logger.debug(
+        `Suggestion ${index + 1}: filename=${s.filename}, line=${s.line}, type=${typeof s.line}`,
+      );
     });
 
     // Post the review
@@ -192,5 +207,95 @@ export class WebhookService {
     }
 
     return comment;
+  }
+
+  private async handleEnhancedPRReview(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    commitSha: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(
+        `Starting enhanced PR review for ${owner}/${repo}#${pullNumber}`,
+      );
+
+      // Get persona from environment or use default
+      const persona = process.env.PR_REVIEW_PERSONA || 'senior';
+
+      // Configure enhanced review
+      const config = {
+        persona,
+        enableAutoFix: process.env.ENABLE_AUTO_FIX === 'true',
+        enableAutoLabeling: process.env.ENABLE_AUTO_LABELING !== 'false', // Default true
+        enableChangelogGeneration: process.env.ENABLE_CHANGELOG === 'true',
+        enableCITrigger: process.env.ENABLE_CI_TRIGGER === 'true',
+        autoApplyFixes: process.env.AUTO_APPLY_FIXES === 'true',
+        confidenceThreshold: parseInt(
+          process.env.AUTO_FIX_CONFIDENCE_THRESHOLD || '80',
+        ),
+        workflowsToTrigger:
+          process.env.CI_WORKFLOWS_TO_TRIGGER?.split(',') || [],
+      };
+
+      // Perform enhanced analysis
+      const analysis = await this.enhancedPRService.processFullPRAnalysis(
+        owner,
+        repo,
+        pullNumber,
+        config,
+      );
+
+      // Post enhanced review
+      await this.enhancedPRService.postEnhancedReview(
+        owner,
+        repo,
+        analysis,
+        commitSha,
+      );
+
+      // Update changelog if enabled and PR is being merged
+      if (config.enableChangelogGeneration && analysis.changelogEntry) {
+        try {
+          await this.enhancedPRService['changelogService'].updateChangelog(
+            analysis.changelogEntry,
+            { filePath: 'CHANGELOG.md' },
+          );
+          this.logger.log('Changelog updated successfully');
+        } catch (error) {
+          this.logger.warn(`Failed to update changelog: ${error.message}`);
+        }
+      }
+
+      this.logger.log(
+        `Enhanced PR review completed for ${owner}/${repo}#${pullNumber}`,
+      );
+    } catch (error) {
+      this.logger.error(`Enhanced PR review failed: ${error.message}`);
+
+      // Fallback to standard review
+      this.logger.log('Falling back to standard review...');
+      const [files, prData] = await Promise.all([
+        this.githubService.getPullRequestFiles(owner, repo, pullNumber),
+        this.githubService.getPullRequest(owner, repo, pullNumber),
+      ]);
+
+      const reviewResult = await this.reviewService.reviewPullRequest(
+        {
+          title: prData.title,
+          body: prData.body,
+          number: pullNumber,
+        },
+        files,
+      );
+
+      await this.postReviewResults(
+        owner,
+        repo,
+        pullNumber,
+        commitSha,
+        reviewResult,
+      );
+    }
   }
 }

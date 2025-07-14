@@ -34,15 +34,14 @@ export abstract class BaseAgent {
       const executionTime = Date.now() - startTime;
       return {
         agentName: this.getAgentName(),
+        analysisTime: executionTime,
+        comments: result.comments || [],
+        summary: result.summary || 'Analysis completed',
         score: result.score || 0,
-        issues: result.issues || [],
-        suggestions: result.suggestions || [],
-        blockMerge: result.blockMerge || false,
         metadata: {
           ...metadata,
           ...result.metadata,
         },
-        executionTime,
       };
     } catch (error: unknown) {
       function getErrorMessage(err: unknown): {
@@ -63,19 +62,18 @@ export abstract class BaseAgent {
       this.logger.error(`Error analyzing code: ${message}`, stack);
       return {
         agentName: this.getAgentName(),
-        score: 0,
-        issues: [
+        analysisTime: 0,
+        comments: [
           {
-            severity: 'WARNING',
-            type: 'analysis_error',
-            description: `Failed to analyze code: ${message}`,
+            file: 'unknown',
+            message: `Failed to analyze code: ${message}`,
+            severity: 'high',
             category: 'quality',
           },
         ],
-        suggestions: [],
-        blockMerge: false,
+        summary: 'Analysis failed due to error',
+        score: 0,
         metadata,
-        executionTime: 0,
       };
     }
   }

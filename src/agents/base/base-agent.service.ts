@@ -32,14 +32,7 @@ export abstract class BaseAgentService {
     temperature: number = 0.1,
   ): Promise<string> {
     try {
-      const response = await this.groqService.chat({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature,
-        max_tokens: 2000,
-      });
+      const response = await this.groqService.getGroqChatCompletion(userPrompt);
 
       return response.choices[0]?.message?.content || '';
     } catch (error) {

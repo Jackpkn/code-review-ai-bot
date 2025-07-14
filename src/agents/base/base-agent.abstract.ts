@@ -26,8 +26,12 @@ export abstract class BaseAgent {
     // Common result parsing logic
     // Structured output validation
     // Error handling
-
+    return {
+      agentName: 'BaseAgent',
+      analysisTime: 0,
+      comments: [],
+      summary: 'Base implementation',
+      score: 0,
+    };
   }
-  
-
 }

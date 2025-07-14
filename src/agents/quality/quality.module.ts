@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { QualityAgent } from './quality.agent';
+import { QualityAgentService } from './quality-agent.service';
 
-@Module({})
-export class QualityModule {
-  providers: [QualityAgent];
-}
+@Module({
+  providers: [QualityAgentService],
+  exports: [QualityAgentService],
+})
+export class QualityModule {}

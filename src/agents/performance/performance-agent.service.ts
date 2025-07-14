@@ -280,7 +280,7 @@ Prioritize issues with significant performance impact. Include complexity analys
     }, {});
 
     const topCategories = Object.entries(categoryCount)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
       .slice(0, 3)
       .map(([category, count]) => `${category} (${count})`)
       .join(', ');
@@ -307,7 +307,7 @@ Prioritize issues with significant performance impact. Include complexity analys
 
     if (hasAlgorithmic || hasMemory || hasDatabase || hasNetwork) {
       summary += ' Priority fixes: ';
-      const priorities = [];
+      const priorities: string[] = [];
       if (hasAlgorithmic) priorities.push('optimize algorithms');
       if (hasMemory) priorities.push('reduce memory usage');
       if (hasDatabase) priorities.push('improve query efficiency');

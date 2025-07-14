@@ -300,7 +300,7 @@ Prioritize issues that significantly impact maintainability and readability.`;
 
     if (hasComplexity || hasNaming || hasDuplication) {
       summary += ' Focus on ';
-      const focuses = [];
+      const focuses: string[] = [];
       if (hasComplexity) focuses.push('reducing complexity');
       if (hasNaming) focuses.push('improving naming');
       if (hasDuplication) focuses.push('eliminating duplication');
