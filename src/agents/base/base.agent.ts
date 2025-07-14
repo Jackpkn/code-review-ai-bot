@@ -44,8 +44,23 @@ export abstract class BaseAgent {
         },
         executionTime,
       };
-    } catch (error) {
-      this.logger.error(`Error analyzing code: ${error.message}`, error.stack);
+    } catch (error: unknown) {
+      function getErrorMessage(err: unknown): {
+        message: string;
+        stack?: string;
+      } {
+        if (typeof err === 'object' && err !== null) {
+          const maybeMsg = (err as Record<string, unknown>).message;
+          const maybeStack = (err as Record<string, unknown>).stack;
+          return {
+            message: typeof maybeMsg === 'string' ? maybeMsg : 'Unknown error',
+            stack: typeof maybeStack === 'string' ? maybeStack : undefined,
+          };
+        }
+        return { message: 'Unknown error' };
+      }
+      const { message, stack } = getErrorMessage(error);
+      this.logger.error(`Error analyzing code: ${message}`, stack);
       return {
         agentName: this.getAgentName(),
         score: 0,
@@ -53,7 +68,7 @@ export abstract class BaseAgent {
           {
             severity: 'WARNING',
             type: 'analysis_error',
-            description: `Failed to analyze code: ${error.message}`,
+            description: `Failed to analyze code: ${message}`,
             category: 'quality',
           },
         ],
