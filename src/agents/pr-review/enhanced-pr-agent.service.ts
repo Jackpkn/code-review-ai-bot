@@ -511,7 +511,7 @@ export class EnhancedPRAgentService {
   private formatEnhancedReviewBody(analysis: EnhancedPRAnalysis): string {
     const { summary, reviewResult, autoFixes, labeling } = analysis;
 
-    let body = `# 🤖 Enhanced PR Review\n\n`;
+    let body = `# 🤖 PR Review bot\n\n`;
 
     // Summary section
     body += `## 📋 Summary\n`;
